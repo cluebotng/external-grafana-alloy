@@ -20,6 +20,7 @@ class TargetConfig:
     port: int
     interval: str
     timeout: str
+    path: Optional[str]
 
 
 def get_remote_config() -> Optional[RemoteConfig]:
@@ -42,6 +43,7 @@ def get_targets_config() -> List[TargetConfig]:
                     port=target["port"],
                     interval=target.get("interval", "60s"),
                     timeout=target.get("timeout", "60s"),
+                    path=target.get("path"),
                 )
             )
     return targets
@@ -56,12 +58,12 @@ def write_config(
     # Scrape targets
     for target_config in target_configs:
         clean_name = target_config.host.replace("-", "_")
-        config += (
-            f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
-        )
+        config += f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
         config += f'    targets = [{{__address__ = "{target_config.host}:{target_config.port}"}}]\n'
         config += f'    scrape_interval = "{target_config.interval}"\n'
         config += f'    scrape_timeout = "{target_config.timeout}"\n'
+        if target_config.path:
+            config += f'    metrics_path = "{target_config.path}"\n'
         config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
         config += "}\n"
 
