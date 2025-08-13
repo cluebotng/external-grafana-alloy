@@ -67,8 +67,13 @@ def write_config(
     config_path: PosixPath,
     target_configs: List[TargetConfig],
     remote_config: RemoteConfig,
+    debug: bool = False,
 ) -> None:
     config = ""
+    if debug:
+        config += 'logging {\n    level="debug"\n}\n'
+        config += "livedebugging {\n    enabled=true\n}\n"
+
     # Scrape targets
     for target_config in target_configs:
         if isinstance(target_config, TargetConfig):
@@ -83,14 +88,50 @@ def write_config(
                 config += f'    metrics_path = "{target_config.path}"\n'
             config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
             config += "}\n"
+
         if isinstance(target_config, DiscoverConfig):
-            config += f'discovery.kubernetes "target_{target_config.role}" {{\n'
+            # Container service tokens don't have any access to the API
+            # So mount NFS and use the tool creds...
+            kubeconfig = None
+            namespace = None
+            if tool_data_dir := os.environ.get("TOOL_DATA_DIR"):
+                namespace = f'tool-{tool_data_dir.split("/")[-1]}'
+                kubeconfig_file = PosixPath(tool_data_dir) / ".kube" / "config"
+                if kubeconfig_file.is_file():
+                    kubeconfig = kubeconfig_file.as_posix()
+
+            # Discover running pods (jobs)
+            config += f'discovery.kubernetes "{target_config.role}" {{\n'
             config += f'    role = "{target_config.role}"\n'
-            for job in target_config.jobs:
-                config += "    selectors {\n"
-                config += '        role = "pod"\n'
-                config += f'        label = "name={job}"\n'
+            if namespace:
+                config += "    namespaces {\n"
+                config += f'        names = ["{namespace}"]\n'
                 config += "    }\n"
+            if kubeconfig:
+                config += f'    kubeconfig_file = "{kubeconfig}"\n'
+            config += "}\n"
+
+            # Filter out to specific pods (jobs)
+            scrape_source = f"discovery.kubernetes.{target_config.role}.targets"
+            if target_config.role == "pod" and target_config.jobs:
+                scrape_source = f"discovery.relabel.{target_config.role}.output"
+                config += f'discovery.relabel "{target_config.role}" {{\n'
+                config += (
+                    f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
+                )
+                config += "    rule {\n"
+                config += (
+                    '        source_labels = ["__meta_kubernetes_pod_label_name"]\n'
+                )
+                config += f'        regex = "({"|".join(target_config.jobs)})"\n'
+                config += '        action = "keep"\n'
+                config += "    }\n"
+                config += "}\n"
+
+            # Scrape the discovered pods (jobs)
+            config += f'prometheus.scrape "{target_config.role}" {{\n'
+            config += f"    targets = {scrape_source}\n"
+            config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
             config += "}\n"
 
     # Remote write
