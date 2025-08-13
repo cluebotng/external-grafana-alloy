@@ -119,12 +119,18 @@ def write_config(
             # Container service tokens don't have any access to the API
             # So mount NFS and use the tool creds...
             kubeconfig = None
-            namespace = None
             if tool_data_dir := os.environ.get("TOOL_DATA_DIR"):
-                namespace = f'tool-{tool_data_dir.split("/")[-1]}'
                 kubeconfig_file = PosixPath(tool_data_dir) / ".kube" / "config"
                 if kubeconfig_file.is_file():
                     kubeconfig = kubeconfig_file.as_posix()
+
+            namespace_file = PosixPath(
+                "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+            )
+            namespace = None
+            if namespace_file.is_file():
+                with namespace_file.open("r") as fh:
+                    namespace = fh.read().strip()
 
             # Discover running pods (jobs)
             config += f'discovery.kubernetes "{target_config.role}" {{\n'
@@ -156,7 +162,12 @@ def write_config(
 
             for target_job in target_jobs:
                 # Scrape the discovered pods (jobs)
-                config += f'prometheus.scrape "{target_config.role}_{target_job.safe_name}" {{\n'
+                scrape_prefix = (
+                    f'{namespace.replace("tool-", "").replace("-", "_")}_'
+                    if namespace
+                    else ""
+                )
+                config += f'prometheus.scrape "{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
                 if target_job.name == "all":
                     config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
                 else:
