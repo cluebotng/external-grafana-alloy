@@ -4,7 +4,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import PosixPath
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 
 @dataclass
@@ -24,13 +24,21 @@ class TargetConfig:
 
 
 @dataclass
+class JobConfig:
+    name: str
+    interval: str = "60s"
+    timeout: str = "60s"
+    path: Optional[str] = None
+
+    @property
+    def safe_name(self) -> str:
+        return self.name.replace("-", "_")
+
+
+@dataclass
 class DiscoverConfig:
     role: str
-    jobs: List[str]
-    path: Optional[str]
-    interval: str
-    timeout: str
-    path: Optional[str]
+    jobs: List[JobConfig]
 
 
 def get_remote_config() -> Optional[RemoteConfig]:
@@ -62,10 +70,15 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                     targets.append(
                         DiscoverConfig(
                             role=target.get("role", "pod"),
-                            jobs=target.get("jobs", []),
-                            interval=target.get("interval", "60s"),
-                            timeout=target.get("timeout", "60s"),
-                            path=target.get("path"),
+                            jobs=[
+                                JobConfig(
+                                    name=job["name"],
+                                    interval=job.get("interval", "60s"),
+                                    timeout=job.get("timeout", "60s"),
+                                    path=job.get("path"),
+                                )
+                                for job in target.get("jobs", [])
+                            ],
                         )
                     )
     return targets
@@ -119,32 +132,39 @@ def write_config(
                 config += f'    kubeconfig_file = "{kubeconfig}"\n'
             config += "}\n"
 
-            # Filter out to specific pods (jobs)
-            scrape_source = f"discovery.kubernetes.{target_config.role}.targets"
-            if target_config.role == "pod" and target_config.jobs:
-                scrape_source = f"discovery.relabel.{target_config.role}.output"
-                config += f'discovery.relabel "{target_config.role}" {{\n'
-                config += (
-                    f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
-                )
-                config += "    rule {\n"
-                config += (
-                    '        source_labels = ["__meta_kubernetes_pod_label_name"]\n'
-                )
-                config += f'        regex = "({"|".join(target_config.jobs)})"\n'
-                config += '        action = "keep"\n'
-                config += "    }\n"
-                config += "}\n"
+            target_jobs = (
+                [JobConfig(name="all")]
+                if not target_config.jobs
+                else target_config.jobs
+            )
+            for target_job in target_jobs:
+                if target_job != "all":
+                    config += f'discovery.relabel "{target_config.role}_{target_job.safe_name}" {{\n'
+                    config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
+                    config += "    rule {\n"
+                    config += (
+                        '        source_labels = ["__meta_kubernetes_pod_label_name"]\n'
+                    )
+                    config += f'        regex = "{target_job.name}"\n'
+                    config += '        action = "keep"\n'
+                    config += "    }\n"
+                    config += "}\n"
 
-            # Scrape the discovered pods (jobs)
-            config += f'prometheus.scrape "{target_config.role}" {{\n'
-            config += f"    targets = {scrape_source}\n"
-            config += f'    scrape_interval = "{target_config.interval}"\n'
-            config += f'    scrape_timeout = "{target_config.timeout}"\n'
-            if target_config.path:
-                config += f'    metrics_path = "{target_config.path}"\n'
-            config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
-            config += "}\n"
+            for target_job in target_jobs:
+                # Scrape the discovered pods (jobs)
+                config += f'prometheus.scrape "{target_config.role}_{target_job.safe_name}" {{\n'
+                if target_job == "all":
+                    config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
+                else:
+                    config += f"    targets = discovery.relabel.{target_config.role}_{target_job.safe_name}.output\n"
+                config += f'    scrape_interval = "{target_job.interval}"\n'
+                config += f'    scrape_timeout = "{target_job.timeout}"\n'
+                if target_job.path:
+                    config += f'    metrics_path = "{target_job.path}"\n'
+                config += (
+                    "    forward_to = [prometheus.remote_write.default.receiver]\n"
+                )
+                config += "}\n"
 
     # Remote write
     config += 'prometheus.remote_write "default" {\n'
