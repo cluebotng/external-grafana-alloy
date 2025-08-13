@@ -1,0 +1,12 @@
+[project]
+name = "grafana-alloy"
+version = "1.0"
+dependencies = [
+    # Need at least 1 dep as the build pack installs against the "main" group,
+    # which doesn't exist if there are no dependencies...
+    "pip"
+]
+
+[tool.poetry.build]
+generate-setup-file = false
+script = "setup.py"

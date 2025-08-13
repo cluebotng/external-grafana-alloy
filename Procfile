@@ -1,0 +1,1 @@
+run-alloy: ./entrypoint.py
