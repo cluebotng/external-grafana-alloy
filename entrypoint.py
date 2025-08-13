@@ -28,6 +28,7 @@ class JobConfig:
     name: str
     interval: str = "60s"
     timeout: str = "60s"
+    label: str = "__meta_kubernetes_pod_label_app_kubernetes_io_name"
     path: Optional[str] = None
 
     @property
@@ -73,6 +74,10 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                             jobs=[
                                 JobConfig(
                                     name=job["name"],
+                                    label=target.get(
+                                        "label",
+                                        "__meta_kubernetes_pod_label_app_kubernetes_io_name",
+                                    ),
                                     interval=job.get("interval", "60s"),
                                     timeout=job.get("timeout", "60s"),
                                     path=job.get("path"),
@@ -142,9 +147,8 @@ def write_config(
                     config += f'discovery.relabel "{target_config.role}_{target_job.safe_name}" {{\n'
                     config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
                     config += "    rule {\n"
-                    config += (
-                        '        source_labels = ["__meta_kubernetes_pod_label_name"]\n'
-                    )
+                    # Note: Depending on how the pod was created (webservice vs job) this is different
+                    config += f'        source_labels = ["{target_job.label}"]\n'
                     config += f'        regex = "{target_job.name}"\n'
                     config += '        action = "keep"\n'
                     config += "    }\n"
