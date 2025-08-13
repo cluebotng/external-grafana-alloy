@@ -74,7 +74,7 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                             jobs=[
                                 JobConfig(
                                     name=job["name"],
-                                    label=target.get(
+                                    label=job.get(
                                         "label",
                                         "__meta_kubernetes_pod_label_app_kubernetes_io_name",
                                     ),
