@@ -27,6 +27,10 @@ class TargetConfig:
 class DiscoverConfig:
     role: str
     jobs: List[str]
+    path: Optional[str]
+    interval: str
+    timeout: str
+    path: Optional[str]
 
 
 def get_remote_config() -> Optional[RemoteConfig]:
@@ -57,7 +61,11 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                 case "discover":
                     targets.append(
                         DiscoverConfig(
-                            role=target.get("role", "pod"), jobs=target.get("jobs", [])
+                            role=target.get("role", "pod"),
+                            jobs=target.get("jobs", []),
+                            interval=target.get("interval", "60s"),
+                            timeout=target.get("timeout", "60s"),
+                            path=target.get("path"),
                         )
                     )
     return targets
@@ -131,6 +139,10 @@ def write_config(
             # Scrape the discovered pods (jobs)
             config += f'prometheus.scrape "{target_config.role}" {{\n'
             config += f"    targets = {scrape_source}\n"
+            config += f'    scrape_interval = "{target_config.interval}"\n'
+            config += f'    scrape_timeout = "{target_config.timeout}"\n'
+            if target_config.path:
+                config += f'    metrics_path = "{target_config.path}"\n'
             config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
             config += "}\n"
 
