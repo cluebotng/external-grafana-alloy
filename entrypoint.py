@@ -143,7 +143,7 @@ def write_config(
                 else target_config.jobs
             )
             for target_job in target_jobs:
-                if target_job != "all":
+                if target_job.name != "all":
                     config += f'discovery.relabel "{target_config.role}_{target_job.safe_name}" {{\n'
                     config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
                     config += "    rule {\n"
@@ -157,7 +157,7 @@ def write_config(
             for target_job in target_jobs:
                 # Scrape the discovered pods (jobs)
                 config += f'prometheus.scrape "{target_config.role}_{target_job.safe_name}" {{\n'
-                if target_job == "all":
+                if target_job.name == "all":
                     config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
                 else:
                     config += f"    targets = discovery.relabel.{target_config.role}_{target_job.safe_name}.output\n"
