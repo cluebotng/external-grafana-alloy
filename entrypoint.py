@@ -55,8 +55,9 @@ def write_config(
     config = ""
     # Scrape targets
     for target_config in target_configs:
+        clean_name = target_config.host.replace("-", "_")
         config += (
-            f'prometheus.scrape "target_{target_config.host}_{target_config.port}" {{\n'
+            f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
         )
         config += f'    targets = [{{__address__ = "{target_config.host}:{target_config.port}"}}]\n'
         config += f'    scrape_interval = "{target_config.interval}"\n'
