@@ -4,7 +4,7 @@ import os
 import sys
 from dataclasses import dataclass
 from pathlib import PosixPath
-from typing import Optional, List
+from typing import Optional, List, Union
 
 
 @dataclass
@@ -23,6 +23,12 @@ class TargetConfig:
     path: Optional[str]
 
 
+@dataclass
+class DiscoverConfig:
+    role: str
+    jobs: List[str]
+
+
 def get_remote_config() -> Optional[RemoteConfig]:
     if remote_url := os.environ.get("ALLOY_REMOTE_URL"):
         return RemoteConfig(
@@ -33,19 +39,27 @@ def get_remote_config() -> Optional[RemoteConfig]:
     return None
 
 
-def get_targets_config() -> List[TargetConfig]:
+def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
     targets = []
     if scrape_targets := os.environ.get("ALLOY_SCRAPE_TARGETS"):
         for target in json.loads(scrape_targets):
-            targets.append(
-                TargetConfig(
-                    host=target["host"],
-                    port=target["port"],
-                    interval=target.get("interval", "60s"),
-                    timeout=target.get("timeout", "60s"),
-                    path=target.get("path"),
-                )
-            )
+            match target.get("type", "target"):
+                case "target":
+                    targets.append(
+                        TargetConfig(
+                            host=target["host"],
+                            port=target["port"],
+                            interval=target.get("interval", "60s"),
+                            timeout=target.get("timeout", "60s"),
+                            path=target.get("path"),
+                        )
+                    )
+                case "discover":
+                    targets.append(
+                        DiscoverConfig(
+                            role=target.get("role", "pod"), jobs=target.get("jobs", [])
+                        )
+                    )
     return targets
 
 
@@ -57,15 +71,27 @@ def write_config(
     config = ""
     # Scrape targets
     for target_config in target_configs:
-        clean_name = target_config.host.replace("-", "_")
-        config += f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
-        config += f'    targets = [{{__address__ = "{target_config.host}:{target_config.port}"}}]\n'
-        config += f'    scrape_interval = "{target_config.interval}"\n'
-        config += f'    scrape_timeout = "{target_config.timeout}"\n'
-        if target_config.path:
-            config += f'    metrics_path = "{target_config.path}"\n'
-        config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
-        config += "}\n"
+        if isinstance(target_config, TargetConfig):
+            clean_name = target_config.host.replace("-", "_")
+            config += (
+                f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
+            )
+            config += f'    targets = [{{__address__ = "{target_config.host}:{target_config.port}"}}]\n'
+            config += f'    scrape_interval = "{target_config.interval}"\n'
+            config += f'    scrape_timeout = "{target_config.timeout}"\n'
+            if target_config.path:
+                config += f'    metrics_path = "{target_config.path}"\n'
+            config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
+            config += "}\n"
+        if isinstance(target_config, DiscoverConfig):
+            config += f'discovery.kubernetes "target_{target_config.role}" {{\n'
+            config += f'    role = "{target_config.role}"\n'
+            for job in target_config.jobs:
+                config += "    selectors {\n"
+                config += '        role = "pod"\n'
+                config += f'        label = "name={job}"\n'
+                config += "    }\n"
+            config += "}\n"
 
     # Remote write
     config += 'prometheus.remote_write "default" {\n'
