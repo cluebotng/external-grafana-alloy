@@ -99,6 +99,22 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
     return targets
 
 
+def get_kubernetes_namespace() -> Optional[str]:
+    namespace_file = PosixPath(
+        "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    )
+    if namespace_file.is_file():
+        with namespace_file.open("r") as fh:
+            return fh.read().strip()
+    return None
+
+
+def get_tool_name(namespace: Optional[str]) -> Optional[str]:
+    if namespace and namespace.startswith('tool-'):
+        return namespace.split('tool-')[1]
+    return None
+
+
 def write_config(
     config_path: PosixPath,
     target_configs: List[TargetConfig],
@@ -110,6 +126,8 @@ def write_config(
         config += 'logging {\n    level="debug"\n}\n'
         config += "livedebugging {\n    enabled=true\n}\n"
 
+    kubernetes_namespace = get_kubernetes_namespace()
+    tool_name = get_tool_name(kubernetes_namespace)
     forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes.keys()]
 
     # Scrape targets
@@ -124,6 +142,13 @@ def write_config(
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
             if target_config.path:
                 config += f'    metrics_path = "{target_config.path}"\n'
+            if kubernetes_namespace or tool_name:
+                config += '    labels {\n'
+                if kubernetes_namespace:
+                    config += f'        namespace = "{kubernetes_namespace}"\n'
+                if tool_name:
+                    config += f'        tool = "{tool_name}"\n'
+                config += '    }\n'
             config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
 
@@ -136,20 +161,12 @@ def write_config(
                 if kubeconfig_file.is_file():
                     kubeconfig = kubeconfig_file.as_posix()
 
-            namespace_file = PosixPath(
-                "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-            )
-            namespace = None
-            if namespace_file.is_file():
-                with namespace_file.open("r") as fh:
-                    namespace = fh.read().strip()
-
             # Discover running pods (jobs)
             config += f'discovery.kubernetes "{target_config.role}" {{\n'
             config += f'    role = "{target_config.role}"\n'
-            if namespace:
+            if kubernetes_namespace:
                 config += "    namespaces {\n"
-                config += f'        names = ["{namespace}"]\n'
+                config += f'        names = ["{kubernetes_namespace}"]\n'
                 config += "    }\n"
             if kubeconfig:
                 config += f'    kubeconfig_file = "{kubeconfig}"\n'
