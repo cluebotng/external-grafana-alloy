@@ -202,6 +202,10 @@ def write_config(
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
                     config += f'    metrics_path = "{target_job.path}"\n'
+                if tool_name:
+                    config += '    labels {\n'
+                    config += f'        source_tool = "{tool_name}"\n'
+                    config += '    }\n'
                 config += f"    forward_to = [{', '.join(forward_to)}]\n"
                 config += "}\n"
 
