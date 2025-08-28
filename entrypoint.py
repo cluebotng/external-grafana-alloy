@@ -42,6 +42,16 @@ class DiscoverConfig:
     jobs: List[JobConfig]
 
 
+def get_local_config() -> Optional[RemoteConfig]:
+    if os.environ.get("ALLOY_SEND_TO_LOCAL_CLUSTER", "true") == "true":
+        return RemoteConfig(
+            url="http://prometheus.tool-cluebotng-monitoring.svc.tools.local:9090/api/v1/write",
+            username=os.environ.get("ALLOY_LOCAL_USERNAME"),
+            password=os.environ.get("ALLOY_LOCAL_PASSWORD"),
+        )
+    return None
+
+
 def get_remote_config() -> Optional[RemoteConfig]:
     if remote_url := os.environ.get("ALLOY_REMOTE_URL"):
         return RemoteConfig(
@@ -92,13 +102,15 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
 def write_config(
     config_path: PosixPath,
     target_configs: List[TargetConfig],
-    remote_config: RemoteConfig,
+    remotes: Dict[str, RemoteConfig],
     debug: bool = False,
 ) -> None:
     config = ""
     if debug:
         config += 'logging {\n    level="debug"\n}\n'
         config += "livedebugging {\n    enabled=true\n}\n"
+
+    forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes.keys()]
 
     # Scrape targets
     for target_config in target_configs:
@@ -112,7 +124,7 @@ def write_config(
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
             if target_config.path:
                 config += f'    metrics_path = "{target_config.path}"\n'
-            config += "    forward_to = [prometheus.remote_write.default.receiver]\n"
+            config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
 
         if isinstance(target_config, DiscoverConfig):
@@ -176,22 +188,21 @@ def write_config(
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
                     config += f'    metrics_path = "{target_job.path}"\n'
-                config += (
-                    "    forward_to = [prometheus.remote_write.default.receiver]\n"
-                )
+                config += f"    forward_to = [{', '.join(forward_to)}]\n"
                 config += "}\n"
 
     # Remote write
-    config += 'prometheus.remote_write "default" {\n'
-    config += "  endpoint {\n"
-    config += f'    url = "{remote_config.url}"\n'
-    if remote_config.username and remote_config.password:
-        config += "    basic_auth {\n"
-        config += f'      username = "{remote_config.username}"\n'
-        config += f'      password = "{remote_config.password}"\n'
-        config += "    }\n"
-    config += "  }\n"
-    config += "}\n"
+    for name, remote in remotes.items():
+        config += f'prometheus.remote_write "{name}" {{\n'
+        config += "  endpoint {\n"
+        config += f'    url = "{remote.url}"\n'
+        if remote.username and remote.password:
+            config += "    basic_auth {\n"
+            config += f'      username = "{remote.username}"\n'
+            config += f'      password = "{remote.password}"\n'
+            config += "    }\n"
+        config += "  }\n"
+        config += "}\n"
 
     with config_path.open("w") as fh:
         fh.write(config)
@@ -220,9 +231,13 @@ def run_alloy(config_path: PosixPath):
 
 
 def main():
-    remote_config = get_remote_config()
-    if not remote_config:
-        print("No remote config found!")
+    remotes = {}
+    if local_config := get_local_config():
+        remotes["local"] = local_config
+    if remote_config := get_remote_config():
+        remotes["remote"] = remote_config
+    if not remotes:
+        print("No remotes found in config!")
         sys.exit(1)
 
     target_configs = get_targets_config()
@@ -231,7 +246,7 @@ def main():
         sys.exit(1)
 
     config_path = PosixPath("/tmp/config.alloy")
-    write_config(config_path, target_configs, remote_config)
+    write_config(config_path, target_configs, remotes)
     run_alloy(config_path)
 
 
