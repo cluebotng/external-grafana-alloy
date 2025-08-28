@@ -142,12 +142,9 @@ def write_config(
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
             if target_config.path:
                 config += f'    metrics_path = "{target_config.path}"\n'
-            if kubernetes_namespace or tool_name:
+            if tool_name:
                 config += '    labels {\n'
-                if kubernetes_namespace:
-                    config += f'        namespace = "{kubernetes_namespace}"\n'
-                if tool_name:
-                    config += f'        tool = "{tool_name}"\n'
+                config += f'        source_tool = "{tool_name}"\n'
                 config += '    }\n'
             config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
@@ -192,8 +189,8 @@ def write_config(
             for target_job in target_jobs:
                 # Scrape the discovered pods (jobs)
                 scrape_prefix = (
-                    f'{namespace.replace("tool-", "").replace("-", "_")}_'
-                    if namespace
+                    f'{kubernetes_namespace.replace("tool-", "").replace("-", "_")}_'
+                    if kubernetes_namespace
                     else ""
                 )
                 config += f'prometheus.scrape "{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
