@@ -214,7 +214,7 @@ def write_config(
         config += "  }\n"
         if tool_name:
             config += "  external_labels = {\n"
-            config += f'    source_tool = "{tool_name}"\n'
+            config += f'    source_tool = "{tool_name}",\n'
             config += "  }\n"
         config += "}\n"
 
