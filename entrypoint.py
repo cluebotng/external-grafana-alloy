@@ -211,11 +211,11 @@ def write_config(
             config += f'      username = "{remote.username}"\n'
             config += f'      password = "{remote.password}"\n'
             config += "    }\n"
-        if tool_name:
-            config += "    external_labels {\n"
-            config += f'        source_tool = "{tool_name}"\n'
-            config += "    }\n"
         config += "  }\n"
+        if tool_name:
+            config += "  external_labels {\n"
+            config += f'    source_tool = "{tool_name}"\n'
+            config += "  }\n"
         config += "}\n"
 
     with config_path.open("w") as fh:
