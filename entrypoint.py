@@ -2,9 +2,9 @@
 import json
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import PosixPath
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union, Dict, Any
 
 
 @dataclass
@@ -21,6 +21,7 @@ class TargetConfig:
     interval: str
     timeout: str
     path: Optional[str]
+    params: Dict[str, Any]
 
 
 @dataclass
@@ -30,6 +31,7 @@ class JobConfig:
     timeout: str = "60s"
     label: str = "__meta_kubernetes_pod_label_app_kubernetes_io_name"
     path: Optional[str] = None
+    params: Dict[str, Any] = field(default_factory=dict)
 
     @property
     def safe_name(self) -> str:
@@ -75,6 +77,7 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                             interval=target.get("interval", "60s"),
                             timeout=target.get("timeout", "60s"),
                             path=target.get("path"),
+                            params=target.get("params", {}),
                         )
                     )
                 case "discover":
@@ -91,6 +94,7 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                                     interval=job.get("interval", "60s"),
                                     timeout=job.get("timeout", "60s"),
                                     path=job.get("path"),
+                                    params=job.get("params", {}),
                                 )
                                 for job in target.get("jobs", [])
                             ],
@@ -141,6 +145,11 @@ def write_config(
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
             if target_config.path:
                 config += f'    metrics_path = "{target_config.path}"\n'
+            if target_config.params:
+                config += "    params = {"
+                for k, v in target_config.params.items():
+                    config += f' "{k}" = ["{v}"],'
+                config += " }\n"
             config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
 
@@ -197,6 +206,11 @@ def write_config(
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
                     config += f'    metrics_path = "{target_job.path}"\n'
+                if target_job.params:
+                    config += "    params = {"
+                    for k, v in target_job.params.items():
+                        config += f' "{k}" = ["{v}"],'
+                    config += " }\n"
                 config += f"    forward_to = [{', '.join(forward_to)}]\n"
                 config += "}\n"
 
@@ -213,9 +227,9 @@ def write_config(
             config += "    }\n"
         config += "  }\n"
         if tool_name:
-            config += "  external_labels = {\n"
-            config += f'    source_tool = "{tool_name}",\n'
-            config += "  }\n"
+            config += "  external_labels = {"
+            config += f' source_tool = "{tool_name}",'
+            config += " }\n"
         config += "}\n"
 
     with config_path.open("w") as fh:
