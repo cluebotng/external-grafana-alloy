@@ -110,8 +110,8 @@ def get_kubernetes_namespace() -> Optional[str]:
 
 
 def get_tool_name(namespace: Optional[str]) -> Optional[str]:
-    if namespace and namespace.startswith('tool-'):
-        return namespace.split('tool-')[1]
+    if namespace and namespace.startswith("tool-"):
+        return namespace.split("tool-")[1]
     return None
 
 
@@ -127,7 +127,6 @@ def write_config(
         config += "livedebugging {\n    enabled=true\n}\n"
 
     kubernetes_namespace = get_kubernetes_namespace()
-    tool_name = get_tool_name(kubernetes_namespace)
     forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes.keys()]
 
     # Scrape targets
@@ -142,10 +141,6 @@ def write_config(
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
             if target_config.path:
                 config += f'    metrics_path = "{target_config.path}"\n'
-            if tool_name:
-                config += '    labels {\n'
-                config += f'        source_tool = "{tool_name}"\n'
-                config += '    }\n'
             config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
 
@@ -202,14 +197,11 @@ def write_config(
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
                     config += f'    metrics_path = "{target_job.path}"\n'
-                if tool_name:
-                    config += '    labels {\n'
-                    config += f'        source_tool = "{tool_name}"\n'
-                    config += '    }\n'
                 config += f"    forward_to = [{', '.join(forward_to)}]\n"
                 config += "}\n"
 
     # Remote write
+    tool_name = get_tool_name(kubernetes_namespace)
     for name, remote in remotes.items():
         config += f'prometheus.remote_write "{name}" {{\n'
         config += "  endpoint {\n"
@@ -218,6 +210,10 @@ def write_config(
             config += "    basic_auth {\n"
             config += f'      username = "{remote.username}"\n'
             config += f'      password = "{remote.password}"\n'
+            config += "    }\n"
+        if tool_name:
+            config += "    external_labels {\n"
+            config += f'        source_tool = "{tool_name}"\n'
             config += "    }\n"
         config += "  }\n"
         config += "}\n"
