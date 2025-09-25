@@ -44,6 +44,22 @@ class DiscoverConfig:
     jobs: List[JobConfig]
 
 
+def get_kubernetes_namespace() -> Optional[str]:
+    namespace_file = PosixPath(
+        "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    )
+    if namespace_file.is_file():
+        with namespace_file.open("r") as fh:
+            return fh.read().strip()
+    return None
+
+
+def get_tool_name(namespace: Optional[str]) -> Optional[str]:
+    if namespace and namespace.startswith("tool-"):
+        return namespace.split("tool-")[1]
+    return None
+
+
 def get_local_config() -> Optional[RemoteConfig]:
     if os.environ.get("ALLOY_SEND_TO_LOCAL_CLUSTER", "true") == "true":
         return RemoteConfig(
@@ -62,6 +78,37 @@ def get_remote_config() -> Optional[RemoteConfig]:
             password=os.environ.get("ALLOY_REMOTE_PASSWORD"),
         )
     return None
+
+
+def get_namespace_jobs() -> List[JobConfig]:
+    kubernetes_namespace = get_kubernetes_namespace()
+    tool_name = get_tool_name(kubernetes_namespace)
+    match tool_name:
+        case "cluebotng":
+            return [
+                JobConfig(
+                    name="cluebotng",
+                    label="__meta_kubernetes_pod_label_name",
+                    path="/api/",
+                    params={"action": "metrics"},
+                ),
+                JobConfig(
+                    name="report-interface", path="/api/", params={"action": "metrics"}
+                ),
+            ]
+
+        case "cluebotng-review":
+            return [
+                JobConfig(name="cluebotng-reviewer", path="/internal/metrics/"),
+                JobConfig(name="celery-flower"),
+            ]
+
+        case "cluebotng-staging":
+            return [
+                JobConfig(name="bot"),
+            ]
+
+    return []
 
 
 def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
@@ -100,23 +147,18 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
                             ],
                         )
                     )
+
+    if os.environ.get("ALLOY_SCRAPE_DEFAULT_JOBS", "true") == "true":
+        targets.append(
+            DiscoverConfig(
+                role="pod",
+                jobs=[JobConfig(name="grafana-alloy"), JobConfig(name="pushgateway")],
+            )
+        )
+
+    if os.environ.get("ALLOY_SCRAPE_NAMESPACE_JOBS", "true") == "true":
+        targets.append(DiscoverConfig(role="pod", jobs=get_namespace_jobs()))
     return targets
-
-
-def get_kubernetes_namespace() -> Optional[str]:
-    namespace_file = PosixPath(
-        "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-    )
-    if namespace_file.is_file():
-        with namespace_file.open("r") as fh:
-            return fh.read().strip()
-    return None
-
-
-def get_tool_name(namespace: Optional[str]) -> Optional[str]:
-    if namespace and namespace.startswith("tool-"):
-        return namespace.split("tool-")[1]
-    return None
 
 
 def write_config(
