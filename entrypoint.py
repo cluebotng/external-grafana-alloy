@@ -176,7 +176,7 @@ def write_config(
     forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes.keys()]
 
     # Scrape targets
-    for target_config in target_configs:
+    for x, target_config in enumerate(target_configs):
         if isinstance(target_config, TargetConfig):
             clean_name = target_config.host.replace("-", "_")
             config += (
@@ -205,7 +205,7 @@ def write_config(
                     kubeconfig = kubeconfig_file.as_posix()
 
             # Discover running pods (jobs)
-            config += f'discovery.kubernetes "{target_config.role}" {{\n'
+            config += f'discovery.kubernetes "{x}_{target_config.role}" {{\n'
             config += f'    role = "{target_config.role}"\n'
             if kubernetes_namespace:
                 config += "    namespaces {\n"
@@ -222,8 +222,8 @@ def write_config(
             )
             for target_job in target_jobs:
                 if target_job.name != "all":
-                    config += f'discovery.relabel "{target_config.role}_{target_job.safe_name}" {{\n'
-                    config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
+                    config += f'discovery.relabel "{x}_{target_config.role}_{target_job.safe_name}" {{\n'
+                    config += f"    targets = discovery.kubernetes.{x}_{target_config.role}.targets\n"
                     config += "    rule {\n"
                     # Note: Depending on how the pod was created (webservice vs job) this is different
                     config += f'        source_labels = ["{target_job.label}"]\n'
@@ -239,11 +239,11 @@ def write_config(
                     if kubernetes_namespace
                     else ""
                 )
-                config += f'prometheus.scrape "{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
+                config += f'prometheus.scrape "{x}_{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
                 if target_job.name == "all":
-                    config += f"    targets = discovery.kubernetes.{target_config.role}.targets\n"
+                    config += f"    targets = discovery.kubernetes.{x}_{target_config.role}.targets\n"
                 else:
-                    config += f"    targets = discovery.relabel.{target_config.role}_{target_job.safe_name}.output\n"
+                    config += f"    targets = discovery.relabel.{x}_{target_config.role}_{target_job.safe_name}.output\n"
                 config += f'    scrape_interval = "{target_job.interval}"\n'
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
