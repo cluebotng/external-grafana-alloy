@@ -31,6 +31,7 @@ class JobConfig:
     timeout: str = "60s"
     label: str = "__meta_kubernetes_pod_label_app_kubernetes_io_name"
     path: Optional[str] = None
+    port: Optional[int] = None
     params: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -101,6 +102,7 @@ def get_namespace_jobs() -> List[JobConfig]:
             return [
                 JobConfig(name="cluebotng-reviewer", path="/internal/metrics/"),
                 JobConfig(name="celery-flower"),
+                JobConfig(name="irc-relay", port="9334"),
             ]
 
         case "cluebotng-staging":
@@ -177,7 +179,7 @@ def write_config(
 
     # Scrape targets
     for x, target_config in enumerate(target_configs):
-        instance_id = f'i_{x}'
+        instance_id = f"i_{x}"
         if isinstance(target_config, TargetConfig):
             clean_name = target_config.host.replace("-", "_")
             config += (
@@ -231,6 +233,16 @@ def write_config(
                     config += f'        regex = "{target_job.name}"\n'
                     config += '        action = "keep"\n'
                     config += "    }\n"
+                    if target_job.port:
+                        # If we specify a port, overwrite it in the address
+                        # We need this in e.g. irc-relay, due to Toolforge only supporting 1 port per container
+                        config += "    rule {\n"
+                        # Note: Depending on how the pod was created (webservice vs job) this is different
+                        config += '        source_labels = ["__address__"]\n'
+                        config += '        regex = "([^:]+)(?::.*)?"\n'
+                        config += '        target_label = "__address__"\n'
+                        config += f'        replacement   = "$1:{target_job.port}"\n'
+                        config += "    }\n"
                     config += "}\n"
 
             for target_job in target_jobs:
