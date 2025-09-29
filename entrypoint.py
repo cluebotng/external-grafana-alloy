@@ -102,7 +102,7 @@ def get_namespace_jobs() -> List[JobConfig]:
             return [
                 JobConfig(name="cluebotng-reviewer", path="/internal/metrics/"),
                 JobConfig(name="celery-flower"),
-                JobConfig(name="irc-relay", port="9334"),
+                JobConfig(name="irc-relay"),
             ]
 
         case "cluebotng-staging":
@@ -225,7 +225,7 @@ def write_config(
             )
             for target_job in target_jobs:
                 if target_job.name != "all":
-                    config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}" {{\n'
+                    config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_{"pod_filter" if target_job.port else "target"}" {{\n'
                     config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
                     config += "    rule {\n"
                     # Note: Depending on how the pod was created (webservice vs job) this is different
@@ -233,16 +233,19 @@ def write_config(
                     config += f'        regex = "{target_job.name}"\n'
                     config += '        action = "keep"\n'
                     config += "    }\n"
-                    if target_job.port:
-                        # If we specify a port, overwrite it in the address
-                        # We need this in e.g. irc-relay, due to Toolforge only supporting 1 port per container
-                        config += "    rule {\n"
-                        # Note: Depending on how the pod was created (webservice vs job) this is different
-                        config += '        source_labels = ["__address__"]\n'
-                        config += '        regex = "([^:]+)(?::.*)?"\n'
-                        config += '        target_label = "__address__"\n'
-                        config += f'        replacement   = "$1:{target_job.port}"\n'
-                        config += "    }\n"
+                    config += "}\n"
+
+                if target_job.name != "all" and target_job.port:
+                    # If we specify a port, overwrite it in the address
+                    # We need this in e.g. irc-relay, due to Toolforge only supporting 1 port per container
+                    config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_target" {{\n'
+                    config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}_pod_filter.output\n"
+                    config += "    rule {\n"
+                    config += '        source_labels = ["__address__"]\n'
+                    config += '        regex = "([^:]+)(?::.*)?"\n'
+                    config += '        target_label = "__address__"\n'
+                    config += f'        replacement = "$1:{target_job.port}"\n'
+                    config += "    }\n"
                     config += "}\n"
 
             for target_job in target_jobs:
@@ -256,7 +259,7 @@ def write_config(
                 if target_job.name == "all":
                     config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
                 else:
-                    config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}.output\n"
+                    config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}_target.output\n"
                 config += f'    scrape_interval = "{target_job.interval}"\n'
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:
