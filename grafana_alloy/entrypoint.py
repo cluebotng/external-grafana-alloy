@@ -294,7 +294,7 @@ def write_config(
 def run_alloy(config_path: PosixPath):
     # Note: We replace the current process, rather than running as a subprocess,
     #      so `alloy` is essentially being run from the launcher.
-    binary_path = PosixPath(__file__).parent / "alloy"
+    binary_path = PosixPath(__file__).parent.parent / "alloy"
     if not binary_path.is_file():
         print("Missing binary!")
         sys.exit(2)
