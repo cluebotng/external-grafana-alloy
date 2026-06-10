@@ -46,9 +46,7 @@ class DiscoverConfig:
 
 
 def get_kubernetes_namespace() -> Optional[str]:
-    namespace_file = PosixPath(
-        "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-    )
+    namespace_file = PosixPath("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
     if namespace_file.is_file():
         with namespace_file.open("r") as fh:
             return fh.read().strip()
@@ -93,9 +91,7 @@ def get_namespace_jobs() -> List[JobConfig]:
                     path="/api/",
                     params={"action": "metrics"},
                 ),
-                JobConfig(
-                    name="report-interface", path="/api/", params={"action": "metrics"}
-                ),
+                JobConfig(name="report-interface", path="/api/", params={"action": "metrics"}),
                 JobConfig(name="irc-relay"),
             ]
 
@@ -183,9 +179,7 @@ def write_config(
         instance_id = f"i_{x}"
         if isinstance(target_config, TargetConfig):
             clean_name = target_config.host.replace("-", "_")
-            config += (
-                f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
-            )
+            config += f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
             config += f'    targets = [{{__address__ = "{target_config.host}:{target_config.port}"}}]\n'
             config += f'    scrape_interval = "{target_config.interval}"\n'
             config += f'    scrape_timeout = "{target_config.timeout}"\n'
@@ -219,11 +213,7 @@ def write_config(
                 config += f'    kubeconfig_file = "{kubeconfig}"\n'
             config += "}\n"
 
-            target_jobs = (
-                [JobConfig(name="all")]
-                if not target_config.jobs
-                else target_config.jobs
-            )
+            target_jobs = [JobConfig(name="all")] if not target_config.jobs else target_config.jobs
             for target_job in target_jobs:
                 if target_job.name != "all":
                     config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_{"pod_filter" if target_job.port else "target"}" {{\n'
@@ -239,7 +229,9 @@ def write_config(
                 if target_job.name != "all" and target_job.port:
                     # If we specify a port, overwrite it in the address
                     # We need this in e.g. irc-relay, due to Toolforge only supporting 1 port per container
-                    config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_target" {{\n'
+                    config += (
+                        f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_target" {{\n'
+                    )
                     config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}_pod_filter.output\n"
                     config += "    rule {\n"
                     config += '        source_labels = ["__address__"]\n'
@@ -252,11 +244,11 @@ def write_config(
             for target_job in target_jobs:
                 # Scrape the discovered pods (jobs)
                 scrape_prefix = (
-                    f'{kubernetes_namespace.replace("tool-", "").replace("-", "_")}_'
-                    if kubernetes_namespace
-                    else ""
+                    f'{kubernetes_namespace.replace("tool-", "").replace("-", "_")}_' if kubernetes_namespace else ""
                 )
-                config += f'prometheus.scrape "{instance_id}_{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
+                config += (
+                    f'prometheus.scrape "{instance_id}_{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
+                )
                 if target_job.name == "all":
                     config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
                 else:

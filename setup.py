@@ -3,7 +3,6 @@ import shutil
 import subprocess
 from pathlib import PosixPath
 
-
 TARGET_RELEASE = "1.10.1"
 TARGET_PATCH = "1"
 WORKSPACE_DIR = PosixPath("/workspace")
@@ -58,17 +57,9 @@ def cleanup():
     DEB_FILE.unlink()
 
 
-def appease_poetry():
-    # Poetry expects a Python package from `setup.py install`, create a minimal one
-    package_dir = PosixPath("/workspace/grafana_alloy")
-    package_dir.mkdir(parents=True)
-    (package_dir / "__init__.py").open("w").close()
-
-
 def main():
     install_package()
     cleanup()
-    appease_poetry()
 
 
 if __name__ == "__main__":

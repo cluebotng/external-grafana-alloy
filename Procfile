@@ -1,1 +1,1 @@
-run-alloy: ./entrypoint.py
+run-alloy: ./grafana_alloy/entrypoint.py
