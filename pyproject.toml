@@ -10,9 +10,7 @@ dependencies = [
 
 [tool.poetry.build]
 generate-setup-file = false
-
-[tool.poetry.scripts]
-install = "setup:main"
+script = "setup.py"
 
 [tool.poetry.group.test.dependencies]
 tox = "*"

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import shutil
 import subprocess
 from pathlib import PosixPath
@@ -58,6 +59,10 @@ def cleanup():
 
 
 def main():
+    if not WORKSPACE_DIR.is_dir():
+        print(f"Skipping setup, workspace does not exist: {WORKSPACE_DIR}")
+        return
+
     install_package()
     cleanup()
 
