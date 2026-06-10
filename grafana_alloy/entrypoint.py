@@ -151,7 +151,11 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
         targets.append(
             DiscoverConfig(
                 role="pod",
-                jobs=[JobConfig(name="grafana-alloy"), JobConfig(name="pushgateway")],
+                jobs=[
+                    JobConfig(name="grafana-alloy"),
+                    JobConfig(name="pushgateway"),
+                    JobConfig(name="monitoring-toolforge"),
+                ],
             )
         )
 
