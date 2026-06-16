@@ -4,14 +4,14 @@ import os
 import sys
 from dataclasses import dataclass, field
 from pathlib import PosixPath
-from typing import Optional, List, Union, Dict, Any
+from typing import Any
 
 
 @dataclass
 class RemoteConfig:
     url: str
-    username: Optional[str]
-    password: Optional[str]
+    username: str | None
+    password: str | None
 
 
 @dataclass
@@ -20,8 +20,8 @@ class TargetConfig:
     port: int
     interval: str
     timeout: str
-    path: Optional[str]
-    params: Dict[str, Any]
+    path: str | None
+    params: dict[str, Any]
 
 
 @dataclass
@@ -30,9 +30,10 @@ class JobConfig:
     interval: str = "60s"
     timeout: str = "60s"
     label: str = "__meta_kubernetes_pod_label_app_kubernetes_io_name"
-    path: Optional[str] = None
-    port: Optional[int] = None
-    params: Dict[str, Any] = field(default_factory=dict)
+    path: str | None = None
+    port: int | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+    exclude_pods: list[str] = field(default_factory=list)
 
     @property
     def safe_name(self) -> str:
@@ -42,10 +43,10 @@ class JobConfig:
 @dataclass
 class DiscoverConfig:
     role: str
-    jobs: List[JobConfig]
+    jobs: list[JobConfig]
 
 
-def get_kubernetes_namespace() -> Optional[str]:
+def get_kubernetes_namespace() -> str | None:
     namespace_file = PosixPath("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
     if namespace_file.is_file():
         with namespace_file.open("r") as fh:
@@ -53,7 +54,7 @@ def get_kubernetes_namespace() -> Optional[str]:
     return None
 
 
-def get_tool_name(namespace: Optional[str]) -> Optional[str]:
+def get_tool_name(namespace: str | None) -> str | None:
     if namespace and namespace.startswith("tool-"):
         return namespace.split("tool-")[1]
     return None
@@ -79,7 +80,7 @@ def get_remote_config() -> Optional[RemoteConfig]:
     return None
 
 
-def get_namespace_jobs() -> List[JobConfig]:
+def get_namespace_jobs() -> list[JobConfig]:
     kubernetes_namespace = get_kubernetes_namespace()
     tool_name = get_tool_name(kubernetes_namespace)
     match tool_name:
@@ -104,13 +105,27 @@ def get_namespace_jobs() -> List[JobConfig]:
 
         case "cluebotng-staging":
             return [
-                JobConfig(name="bot"),
+                JobConfig(name="report-interface", path="/api/", params={"action": "metrics"}),
+            ]
+
+        case "cluebotng-monitoring":
+            return [
+                JobConfig(
+                    name="all",
+                    exclude_pods=[
+                        # Configured as static scrape targets in Prometheus config
+                        "prometheus",
+                        "alertmanager",
+                        "checker",
+                        "blackbox-exporter",
+                    ],
+                )
             ]
 
     return []
 
 
-def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
+def get_targets_config() -> list[TargetConfig | DiscoverConfig]:
     targets = []
     if scrape_targets := os.environ.get("ALLOY_SCRAPE_TARGETS"):
         for target in json.loads(scrape_targets):
@@ -166,8 +181,8 @@ def get_targets_config() -> List[Union[TargetConfig, DiscoverConfig]]:
 
 def write_config(
     config_path: PosixPath,
-    target_configs: List[TargetConfig],
-    remotes: Dict[str, RemoteConfig],
+    target_configs: list[TargetConfig],
+    remotes: dict[str, RemoteConfig],
     debug: bool = False,
 ) -> None:
     config = ""
@@ -180,7 +195,7 @@ def write_config(
 
     # Scrape targets
     for x, target_config in enumerate(target_configs):
-        instance_id = f"i_{x}"
+        instance_id = f"i{x}"
         if isinstance(target_config, TargetConfig):
             clean_name = target_config.host.replace("-", "_")
             config += f'prometheus.scrape "target_{clean_name}_{target_config.port}" {{\n'
@@ -219,8 +234,9 @@ def write_config(
 
             target_jobs = [JobConfig(name="all")] if not target_config.jobs else target_config.jobs
             for target_job in target_jobs:
+                job_id = f"{instance_id}_{target_config.role}_{target_job.safe_name}"
                 if target_job.name != "all":
-                    config += f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_{"pod_filter" if target_job.port else "target"}" {{\n'
+                    config += f'discovery.relabel "{job_id}_{"pod_filter" if target_job.port else "target"}" {{\n'
                     config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
                     config += "    rule {\n"
                     # Note: Depending on how the pod was created (webservice vs job) this is different
@@ -233,10 +249,8 @@ def write_config(
                 if target_job.name != "all" and target_job.port:
                     # If we specify a port, overwrite it in the address
                     # We need this in e.g. irc-relay, due to Toolforge only supporting 1 port per container
-                    config += (
-                        f'discovery.relabel "{instance_id}_{target_config.role}_{target_job.safe_name}_target" {{\n'
-                    )
-                    config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}_pod_filter.output\n"
+                    config += f'discovery.relabel "{job_id}_target" {{\n'
+                    config += f"    targets = discovery.relabel.{job_id}_pod_filter.output\n"
                     config += "    rule {\n"
                     config += '        source_labels = ["__address__"]\n'
                     config += '        regex = "([^:]+)(?::.*)?"\n'
@@ -245,18 +259,27 @@ def write_config(
                     config += "    }\n"
                     config += "}\n"
 
+                if target_job.name == "all" and target_job.exclude_pods:
+                    config += f'discovery.relabel "{job_id}_target" {{\n'
+                    config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
+                    config += "    rule {\n"
+                    config += f'        source_labels = ["{target_job.label}"]\n'
+                    config += f'        regex = "({"|".join(target_job.exclude_pods)})"\n'
+                    config += '        action = "drop"\n'
+                    config += "    }\n"
+                    config += "}\n"
+
             for target_job in target_jobs:
                 # Scrape the discovered pods (jobs)
                 scrape_prefix = (
                     f'{kubernetes_namespace.replace("tool-", "").replace("-", "_")}_' if kubernetes_namespace else ""
                 )
-                config += (
-                    f'prometheus.scrape "{instance_id}_{scrape_prefix}{target_config.role}_{target_job.safe_name}" {{\n'
-                )
-                if target_job.name == "all":
+                job_id = f"{target_config.role}_{target_job.safe_name}"
+                config += f'prometheus.scrape "{instance_id}_{scrape_prefix}{job_id}" {{\n'
+                if target_job.name == "all" and not target_job.exclude_pods:
                     config += f"    targets = discovery.kubernetes.{instance_id}_{target_config.role}.targets\n"
                 else:
-                    config += f"    targets = discovery.relabel.{instance_id}_{target_config.role}_{target_job.safe_name}_target.output\n"
+                    config += f"    targets = discovery.relabel.{instance_id}_{job_id}_target.output\n"
                 config += f'    scrape_interval = "{target_job.interval}"\n'
                 config += f'    scrape_timeout = "{target_job.timeout}"\n'
                 if target_job.path:

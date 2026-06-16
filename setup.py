@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 import shutil
 import subprocess
 from pathlib import PosixPath
