@@ -94,6 +94,7 @@ def get_namespace_jobs() -> list[JobConfig]:
                 ),
                 JobConfig(name="report-interface", path="/api/", params={"action": "metrics"}),
                 JobConfig(name="irc-relay"),
+                JobConfig(name="bot"),
             ]
 
         case "cluebotng-review":
