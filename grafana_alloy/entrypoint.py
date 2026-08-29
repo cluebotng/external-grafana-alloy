@@ -60,7 +60,7 @@ def get_tool_name(namespace: str | None) -> str | None:
     return None
 
 
-def get_local_config() -> Optional[RemoteConfig]:
+def get_local_config() -> RemoteConfig | None:
     if os.environ.get("ALLOY_SEND_TO_LOCAL_CLUSTER", "true") == "true":
         return RemoteConfig(
             url="http://prometheus.tool-cluebotng-monitoring.svc.tools.local:9090/api/v1/write",
@@ -70,7 +70,7 @@ def get_local_config() -> Optional[RemoteConfig]:
     return None
 
 
-def get_remote_config() -> Optional[RemoteConfig]:
+def get_remote_config() -> RemoteConfig | None:
     if remote_url := os.environ.get("ALLOY_REMOTE_URL"):
         return RemoteConfig(
             url=remote_url,
