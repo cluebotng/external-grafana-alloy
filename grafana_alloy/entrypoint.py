@@ -192,7 +192,7 @@ def write_config(
         config += "livedebugging {\n    enabled=true\n}\n"
 
     kubernetes_namespace = get_kubernetes_namespace()
-    forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes.keys()]
+    forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes]
 
     # Scrape targets
     for x, target_config in enumerate(target_configs):
