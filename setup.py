@@ -26,8 +26,10 @@ def install_package():
                 "-L",
                 "-o",
                 DEB_FILE.as_posix(),
-                f"https://github.com/grafana/alloy/releases/download/v{TARGET_RELEASE}/"
-                f"alloy-{TARGET_RELEASE}-{TARGET_PATCH}.amd64.deb",
+                (
+                    f"https://github.com/grafana/alloy/releases/download/v{TARGET_RELEASE}/"
+                    f"alloy-{TARGET_RELEASE}-{TARGET_PATCH}.amd64.deb"
+                ),
             ],
             check=True,
         )
