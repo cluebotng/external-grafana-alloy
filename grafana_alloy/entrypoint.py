@@ -80,6 +80,16 @@ def get_remote_config() -> RemoteConfig | None:
     return None
 
 
+def get_scrape_authorization() -> str | None:
+    if shared_secret := os.environ.get("MONITORING_SHARED_SECRET"):
+        config = "    authorization {\n"
+        config += '        type = "Bearer"\n'
+        config += f"        credentials = {json.dumps(shared_secret)}\n"
+        config += "    }\n"
+        return config
+    return None
+
+
 def get_namespace_jobs() -> list[JobConfig]:
     kubernetes_namespace = get_kubernetes_namespace()
     tool_name = get_tool_name(kubernetes_namespace)
@@ -194,6 +204,7 @@ def write_config(
         config += "livedebugging {\n    enabled=true\n}\n"
 
     kubernetes_namespace = get_kubernetes_namespace()
+    scrape_authorization = get_scrape_authorization()
     forward_to = [f"prometheus.remote_write.{name}.receiver" for name in remotes]
 
     # Scrape targets
@@ -212,6 +223,8 @@ def write_config(
                 for k, v in target_config.params.items():
                     config += f' "{k}" = ["{v}"],'
                 config += " }\n"
+            if scrape_authorization:
+                config += scrape_authorization
             config += f"    forward_to = [{', '.join(forward_to)}]\n"
             config += "}\n"
 
@@ -292,6 +305,8 @@ def write_config(
                     for k, v in target_job.params.items():
                         config += f' "{k}" = ["{v}"],'
                     config += " }\n"
+                if scrape_authorization:
+                    config += scrape_authorization
                 config += f"    forward_to = [{', '.join(forward_to)}]\n"
                 config += "}\n"
 
