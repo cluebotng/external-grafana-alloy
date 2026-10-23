@@ -93,6 +93,7 @@ def get_namespace_jobs() -> list[JobConfig]:
                     params={"action": "metrics"},
                 ),
                 JobConfig(name="report-interface", path="/api/", params={"action": "metrics"}),
+                JobConfig(name="reporter-interface", path="/internal/metrics/"),
                 JobConfig(name="irc-relay"),
                 JobConfig(name="bot"),
             ]
@@ -107,6 +108,7 @@ def get_namespace_jobs() -> list[JobConfig]:
         case "cluebotng-staging":
             return [
                 JobConfig(name="report-interface", path="/api/", params={"action": "metrics"}),
+                JobConfig(name="reporter-interface", path="/internal/metrics/"),
             ]
 
         case "cluebotng-monitoring":
