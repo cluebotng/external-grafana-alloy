@@ -5,7 +5,7 @@ requires-python = ">=3.14"
 dependencies = [
     # Need at least 1 dep as the build pack installs against the "main" group,
     # which doesn't exist if there are no dependencies...
-    "pip"
+    "pip>=26.2.2"
 ]
 
 [tool.poetry.build]
@@ -13,10 +13,10 @@ generate-setup-file = false
 script = "setup.py"
 
 [tool.poetry.group.test.dependencies]
-tox = "*"
-tox-current-env = "*"
-black = "*"
-ruff = "*"
+tox = ">=4.67.4"
+tox-current-env = ">=0.0.17"
+black = ">=26.10.1"
+ruff = ">=0.17.3"
 
 [tool.ruff]
 line-length = 120
