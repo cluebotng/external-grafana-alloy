@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from pathlib import PosixPath
 
-TARGET_RELEASE = "1.10.1"
+TARGET_RELEASE = "1.21.3"
 TARGET_PATCH = "1"
 WORKSPACE_DIR = PosixPath("/workspace")
 APT_DIR = PosixPath("/tmp/apt")

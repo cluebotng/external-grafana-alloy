@@ -17,5 +17,16 @@
       "matchManagers": ["poetry", "pep621", "pip_requirements", "pyenv"],
       "groupName": "Python dependencies"
     }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update Grafana Alloy release in setup.py",
+      "managerFilePatterns": ["/^setup\\.py$/"],
+      "matchStrings": ["TARGET_RELEASE = \"(?<currentValue>[^\"]+)\""],
+      "depNameTemplate": "grafana/alloy",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.+)$"
+    }
   ]
 }
