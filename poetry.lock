@@ -53,26 +53,26 @@ uvloop = ["uvloop (>=0.15.2) ; sys_platform != \"win32\"", "winloop (>=0.5.0) ; 
 
 [[package]]
 name = "cachetools"
-version = "7.2.7"
+version = "8.0.0"
 description = "Extensible memoizing collections and decorators"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.11"
 groups = ["test"]
 files = [
-    {file = "cachetools-7.2.7-py3-none-any.whl", hash = "sha256:88e6b53373a96786d20894fed9ce623ae5b73cbc07421b7a73098db088be69ae"},
-    {file = "cachetools-7.2.7.tar.gz", hash = "sha256:e2154c809ce9e1247120258c36821467597b5663d44c3255a9790785f23c2b1e"},
+    {file = "cachetools-8.0.0-py3-none-any.whl", hash = "sha256:5af562e5078f0086771a1e3832a9c3dbf5d336b6e2794a2c12a64680a4c9087d"},
+    {file = "cachetools-8.0.0.tar.gz", hash = "sha256:5ed01bd676800d51f0025605e4fd8ad0891550513e7b0a4c3da478463764e5c3"},
 ]
 
 [[package]]
 name = "click"
-version = "8.5.0"
+version = "8.5.1"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.10"
 groups = ["test"]
 files = [
-    {file = "click-8.5.0-py3-none-any.whl", hash = "sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360"},
-    {file = "click-8.5.0.tar.gz", hash = "sha256:ba0d2089de75ea0310e2dde03160e6ca10009947fb95a182f9b54021bb272e34"},
+    {file = "click-8.5.1-py3-none-any.whl", hash = "sha256:8bb5376d2006950386f8c6427613334a2acadc5f559cb80e638d00b4df957e37"},
+    {file = "click-8.5.1.tar.gz", hash = "sha256:9bbfada76703fd1d784b83eea012e3e8c6a001a876543ef104fa56aaaeb072b4"},
 ]
 
 [[package]]
@@ -101,26 +101,26 @@ files = [
 
 [[package]]
 name = "filelock"
-version = "4.2.4"
+version = "4.2.10"
 description = "A platform independent file lock."
 optional = false
 python-versions = ">=3.11"
 groups = ["test"]
 files = [
-    {file = "filelock-4.2.4-py3-none-any.whl", hash = "sha256:301241438c57936ef93f4243a94f2559022268bfcf9b375a9a72eb0f8db8358e"},
-    {file = "filelock-4.2.4.tar.gz", hash = "sha256:c6d8663535e1650ee430507b4ffbac7b464dd64b7647ea0112a9f406499d163d"},
+    {file = "filelock-4.2.10-py3-none-any.whl", hash = "sha256:9479aaeb4db20b5a53e3da28493edd24720b66b8a0b84030aa56ccdf243d6857"},
+    {file = "filelock-4.2.10.tar.gz", hash = "sha256:fcc3c0cb8bfe7f4b3bb0e231c04b15dbad068cb3c2515f343d8fde4dce93bd5d"},
 ]
 
 [[package]]
 name = "mypy-extensions"
-version = "1.1.0"
+version = "1.2.0"
 description = "Type system extensions for programs checked with the mypy type checker."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 groups = ["test"]
 files = [
-    {file = "mypy_extensions-1.1.0-py3-none-any.whl", hash = "sha256:1be4cccdb0f2482337c4743e60421de3a356cd97508abadd57d47403e94f5505"},
-    {file = "mypy_extensions-1.1.0.tar.gz", hash = "sha256:52e68efc3284861e772bbcd66823fde5ae21fd2fdb51c62a211403730b916558"},
+    {file = "mypy_extensions-1.2.0-py3-none-any.whl", hash = "sha256:993e7a20aa5671eb41a7132cf555af30062da99729601601b9a8382b11cae768"},
+    {file = "mypy_extensions-1.2.0.tar.gz", hash = "sha256:c6e275a07f1c2fc096b62940452d0eaa3f3af7de45d704787866240a7c6d5a51"},
 ]
 
 [[package]]
@@ -166,14 +166,14 @@ files = [
 
 [[package]]
 name = "platformdirs"
-version = "4.14.0"
+version = "4.14.5"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
 optional = false
 python-versions = ">=3.11"
 groups = ["test"]
 files = [
-    {file = "platformdirs-4.14.0-py3-none-any.whl", hash = "sha256:1dadfc59a8a5d7565b3d9270ae8fa71c065595352c4277b41c11ee6c222c4b91"},
-    {file = "platformdirs-4.14.0.tar.gz", hash = "sha256:83f009c1e8c5fc36869b5171755b291887bd2cade7965233cdfabd23d754720b"},
+    {file = "platformdirs-4.14.5-py3-none-any.whl", hash = "sha256:8e778c6fa421516f4d3369449f8df3b0e1b72c0e0005fe88e3ec772d0a14e750"},
+    {file = "platformdirs-4.14.5.tar.gz", hash = "sha256:32e9921db7385aa8169bee4fe9501923e5715ba9fb7ea3b9c69b0d8e0639f7a1"},
 ]
 
 [[package]]
@@ -190,14 +190,14 @@ files = [
 
 [[package]]
 name = "pyproject-api"
-version = "1.12.2"
+version = "1.12.5"
 description = "API to interact with the python pyproject.toml based projects"
 optional = false
 python-versions = ">=3.11"
 groups = ["test"]
 files = [
-    {file = "pyproject_api-1.12.2-py3-none-any.whl", hash = "sha256:b832f139e5b5e6a01a67e55e38603e8a99cd43556fc2f6fc5659946da25c5f54"},
-    {file = "pyproject_api-1.12.2.tar.gz", hash = "sha256:ad2a72516abcc950877222e9eff760c9120d2086f0d9fce6aef4f16985a3e946"},
+    {file = "pyproject_api-1.12.5-py3-none-any.whl", hash = "sha256:d9cc8c913912035ecd95451a97216083c738b5ff31c45fd168c1f3a28baf01d7"},
+    {file = "pyproject_api-1.12.5.tar.gz", hash = "sha256:0795693708f631af4c665ab02a315edc0fb97471f1d52e4a6179ed60504e96bb"},
 ]
 
 [package.dependencies]
@@ -205,14 +205,14 @@ packaging = ">=26.3"
 
 [[package]]
 name = "python-discovery"
-version = "1.9.0"
+version = "1.9.5"
 description = "Python interpreter discovery"
 optional = false
 python-versions = ">=3.9"
 groups = ["test"]
 files = [
-    {file = "python_discovery-1.9.0-py3-none-any.whl", hash = "sha256:fb65edfff3541b7ceb3a39be334a0f69f4cb5148287a053e1874748742fda93b"},
-    {file = "python_discovery-1.9.0.tar.gz", hash = "sha256:88beb57e51b919c30f303b053ec41359298ca349192035b0a802c76347ae96d7"},
+    {file = "python_discovery-1.9.5-py3-none-any.whl", hash = "sha256:a1fae8fca11e4bc61e38491c2aafff29e430b3c5e272d51ae52fb895bc4c0fac"},
+    {file = "python_discovery-1.9.5.tar.gz", hash = "sha256:86279f5d2728bc067de28b7ddc571be2eacc2ae0e7048f8629d2481a0f8848a2"},
 ]
 
 [package.dependencies]
@@ -361,14 +361,14 @@ tests = ["packaging", "pytest", "pytest-xdist"]
 
 [[package]]
 name = "virtualenv"
-version = "21.15.1"
+version = "21.15.6"
 description = "Virtual Python Environment builder"
 optional = false
 python-versions = ">=3.9"
 groups = ["test"]
 files = [
-    {file = "virtualenv-21.15.1-py3-none-any.whl", hash = "sha256:0d14a991689c67600316880eadc0a37b7690cb632e3b4ac67e2bc05b2b2e24a4"},
-    {file = "virtualenv-21.15.1.tar.gz", hash = "sha256:e79c90b8f601701599c25905e02839924fede2c798d52325670d24fbdaab74ee"},
+    {file = "virtualenv-21.15.6-py3-none-any.whl", hash = "sha256:4b99ab9b95ff11043939bb4cad2fa0449175fa5a478372864f62160cb6c1a7ed"},
+    {file = "virtualenv-21.15.6.tar.gz", hash = "sha256:c8b65c7d206ca6ef18de9352c160b3f04f66fff9f6b0ec8fd31f14688eba52c4"},
 ]
 
 [package.dependencies]
